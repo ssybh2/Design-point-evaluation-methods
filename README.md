@@ -4,8 +4,8 @@ MATLAB-based conceptual aircraft design-point evaluation tool for **AERO1003 Cou
 
 This repository contains a constraint-area sampling and full-aircraft evaluation workflow used to select a final design point for a **186-seat medium-haul civil transport aircraft**. The tool rebuilds the updated `T/W`--`W/S` constraint graph, searches the feasible design area, evaluates candidate aircraft configurations, and ranks the surviving candidates using a balanced objective score.
 
-> This is a **preliminary conceptual-design tool**.  
-> It is not a certification-level performance, stability, structural, or engine-performance model.
+> This is a **conceptual-design tool**.  
+> It is not an engine-performance model.
 
 ---
 
