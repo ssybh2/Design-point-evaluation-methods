@@ -1,578 +1,185 @@
-# Design Point Evaluation Methods for AERO1003 CW4
+# CW4 Calibrated Constraint-Area Sampler
 
-MATLAB-based conceptual aircraft design-point evaluation tool developed for **AERO1003 Coursework 4**.
+This repository contains a MATLAB preliminary aircraft design-point selection tool for an AERO1003 Coursework 4 style narrow-body transport aircraft study.  
 
-This repository contains a **constraint-area sampling and full-aircraft evaluation framework** used to identify the final design point for a **186-seat medium-haul civil transport aircraft**.  
-The method rebuilds the updated **\(T/W\)–\(W/S\)** constraint graph, samples feasible candidate design points, runs an aircraft-level sizing loop for each candidate, and ranks the candidates using a calibrated weighted objective score.
+The tool compares the original CW2 constraint-analysis design point with a revised CW4 design-point selection process. Instead of choosing a point from a simple rectangular search window, the code first builds the final constraint-design area, then evaluates only the candidate points that lie inside that area using a full-aircraft preliminary sizing loop.
 
-> This is a **preliminary conceptual-design tool**.  
-> It is **not** a certification-level performance, stability, structural, or engine-performance model.
+The main selected CW4 candidate from the current run is:
 
----
-
-## Repository overview
-
-The Coursework 4 design process required the aircraft to be re-iterated after the wing, mass, drag, tail, centre-of-gravity, and landing-gear assumptions had been updated.
-
-The original constraint-analysis design point and the inherited aircraft geometry no longer represented the same aircraft. Therefore, a repeatable **MATLAB design-point evaluation method** was developed so that the final design point was selected systematically rather than only by visual inspection of the matching chart.
-
-This tool answers three main questions:
-
-1. Which \(W/S\)–\(T/W\) combinations are inside the updated feasible design area?
-2. Which feasible candidates still produce realistic aircraft-level geometry, mass, CG, tail, and landing-gear results?
-3. Which candidate gives the best overall preliminary aircraft-level compromise under the adopted scoring policy?
+| Quantity | Selected value |
+|---|---:|
+| Wing loading, `W/S` | `5050 N/m²` |
+| Thrust-to-weight ratio, `T/W` | `0.335` |
+| Objective score | `0.04056` |
+| Wing area | `176.01 m²` |
+| Wing span | `38.68 m` |
+| MTOW | `90,606 kg` |
+| Fuel mass | `21,586 kg` |
+| Cruise L/D | `16.57` |
+| Total thrust | `297.76 kN` |
+| Thrust per engine | `148.88 kN` |
 
 ---
 
-## Key output figures
+## What this repository is for
 
-### 1. CW2 and CW4 constraint-graph overlay
+The repository is used to support the CW4 aircraft design-point update. It answers three practical questions:
 
-<p align="center">
-  <img src="figures/constraint_iteration_overlay.png" alt="CW2 and CW4 constraint graph overlay" width="900">
-</p>
+1. **How did the CW4 design point move relative to the original CW2 point?**  
+   The overlay plot compares the old CW2 constraint graph with the revised CW4 constraint graph.
 
-This figure compares the **baseline CW2 constraint graph** and the **updated CW4 constraint graph**, together with the earlier CW2 design point and the MATLAB score-minimum candidate.
+2. **Which part of the `W/S`--`T/W` space is physically acceptable under the updated constraints?**  
+   The design-area plot shows the region that satisfies the final landing, take-off, cruise and OEI/climb limits before the aircraft-level sizing checks are applied.
+
+3. **Which feasible candidate gives the best balanced aircraft outcome?**  
+   The objective-score map shows where the scoring function gives the lowest penalty after full-aircraft sizing, mass, balance, tail, landing-gear and benchmark checks.
+
+This is a preliminary design tool. It is not a certification model and should not be interpreted as a final aircraft performance validation.
+
+---
+
+## Main result figures
+
+### 1. CW2 and CW4 constraint graph overlay
+
+![CW2 and CW4 constraint graph overlay](figures/figure/combined.png)
+
+This figure compares the original CW2 matching chart with the revised CW4 matching chart. The dashed lines represent the CW2 constraints, while the solid lines represent the final CW4 constraints. The open circle marks the original CW2 design point, and the star marks the selected CW4 MATLAB score-minimum point.
+
+The most important message from this plot is that the final CW4 design point moved to a much higher wing loading and a slightly higher thrust-to-weight ratio. The revised landing limit is also less restrictive than the original CW2 landing limit, allowing a wider feasible region at higher `W/S`.
 
 ---
 
 ### 2. Constraint-filtered full-aircraft design sweep
 
-<p align="center">
-  <img src="results_calibrated_balanced/candidate_map_balanced.png" alt="Constraint-filtered full-aircraft design sweep" width="900">
-</p>
+![Constraint-filtered full-aircraft design sweep](figures/figure/design%20area.png)
 
-This figure shows the raw feasible region, the sampled candidate points, infeasible points, feasible full-aircraft candidates, and the current best point.
+This figure shows the final constraint-design area used by the MATLAB sweep. The shaded region represents the raw design area allowed by the constraint graph. Candidate points are generated inside this region and then passed into the full-aircraft sizing loop.
 
----
+The grey points represent candidates that were either infeasible or rejected after the detailed checks. The coloured points represent feasible full-aircraft candidates, where the colour indicates the objective score. The star marks the best candidate found by the sweep.
 
-### 3. Objective score map inside the design area
-
-<p align="center">
-  <img src="results_calibrated_balanced/objective_score_map_balanced.png" alt="Objective score map inside constraint design area" width="900">
-</p>
-
-This figure shows how the weighted objective score varies across the feasible design area.  
-Lower score is better.
+This plot is important because it shows that the selected point was not chosen arbitrarily. It was selected after the constraint graph, aircraft sizing loop and realism filters had all been applied.
 
 ---
 
-### 4. Updated constraint graph
+### 3. Objective score map near the selected design point
 
-<p align="center">
-  <img src="results_calibrated_balanced/constraint_graph_balanced.png" alt="Updated constraint graph" width="900">
-</p>
+![Objective score map near the selected design point](figures/figure/detail.png)
 
-This is the report-ready updated matching chart with the final feasible design area and selected point.
+This figure zooms into the feasible candidate region and shows how the objective score changes around the selected design point. Lower score is better. The star marks the best candidate at `W/S = 5050 N/m²` and `T/W = 0.335`.
 
----
-
-## Overall workflow
-
-The current **v9** workflow is:
-
-1. Rebuild the updated \(T/W\)–\(W/S\) constraint graph.
-2. Define the raw feasible design area using the **landing**, **take-off**, **cruise**, and **OEI/climb** constraints.
-3. Sample candidate \(W/S\)–\(T/W\) points inside the design space.
-4. Reject points outside the raw constraint-graph design area before running the full-aircraft model.
-5. Run the aircraft-level sizing loop for each remaining candidate.
-6. Check each candidate against constraint, benchmark, and configuration rules.
-7. Rank feasible candidates using the calibrated weighted objective score.
-8. Export report-ready figures, CSV tables, and MATLAB result files.
+The plot shows that the selected point sits close to the lowest-score region rather than at an isolated numerical accident. This supports using it as a balanced CW4 design point, because nearby candidates have similar behaviour and the result is not overly sensitive to a single grid point.
 
 ---
 
-## Constraint-graph logic
+## How the code works
 
-The matching chart uses take-off wing loading as the horizontal-axis variable and installed sea-level thrust-to-weight ratio as the vertical-axis variable:
+The workflow is:
 
-$$
-x=\frac{W_{TO}}{S},
-\qquad
-y=\frac{T_{SL}}{W_{TO}}
-$$
+1. Build the final CW4 constraint graph.
+2. Identify the raw feasible design area from the final landing, take-off, cruise and OEI/climb constraints.
+3. Generate candidate `W/S`--`T/W` points only inside the constraint-design area.
+4. Run a full-aircraft preliminary sizing loop for each candidate.
+5. Check each candidate against aircraft-level constraints and benchmark realism limits.
+6. Score the feasible candidates using a balanced objective function.
+7. Export CSV tables, MATLAB result files and report-ready plots.
 
-The four updated constraint boundaries are:
-
-1. Landing boundary  
-2. Take-off boundary  
-3. Cruise boundary  
-4. OEI/climb boundary  
-
-The final feasible design region is defined by the landing boundary and the active thrust envelope.
+The key point is that the repository does not simply plot a matching chart. It connects the matching chart to a full-aircraft candidate evaluation process.
 
 ---
 
-## Landing boundary
-
-The landing constraint is first evaluated on the landing-weight axis and then converted onto the take-off wing-loading axis using the landing weight fraction:
-
-$$
-\left(\frac{W_{TO}}{S}\right)_L
-=
-\frac{1}{\beta_L}
-\left(\frac{W}{S}\right)_L
-$$
-
-Current values:
-
-```matlab
-betaLanding = 0.85;
-CLmaxL = 3.0;
-LFL = 1500;      % m
-```
-
-This gives the take-off-axis landing boundary used in the report:
-
-```text
-W/S <= 5580.176 N/m^2
-```
-
-This is the **vertical landing line** on the matching chart.  
-Candidate points must lie to the **left** of this line.
-
----
-
-## Take-off boundary
-
-The take-off boundary is calculated from the required take-off field length and the selected take-off maximum lift coefficient:
-
-$$
-\left(\frac{T}{W}\right)_{TO}
-=
-\frac{0.239}{S_{TO}C_{L,\max,TO}}
-\left(\frac{W}{S}\right)
-$$
-
-Current values:
-
-```matlab
-TOFL = 1700;     % m
-CLmaxTO = 2.4;
-```
-
-This produces a **rising straight line** on the matching chart.  
-A higher wing loading requires a higher thrust-to-weight ratio to achieve the same take-off distance.
-
----
-
-## Cruise boundary
-
-The cruise boundary is based on the steady level-flight condition:
-
-$$
-T=D
-$$
-
-with the parabolic drag polar:
-
-$$
-C_D=C_{D0}+KC_L^2
-$$
-
-The installed sea-level thrust-to-weight requirement is represented as:
-
-$$
-\left(\frac{T}{W}\right)_{cr}
-=
-\frac{1}{\alpha_{lap}}
-\left[
-\frac{qC_{D0}}{W/S}
-+
-\frac{K(W/S)}{q}
-\right]
-$$
-
-Current values:
-
-```matlab
-CD0 = 0.0175;
-AR = 8.5;
-e = 0.85;
-K = 1/(pi*e*AR);
-qCruise = 10660.9;          % N/m^2
-thrustLapseCruise = 0.291;
-```
-
-The cruise curve is **U-shaped** because the parasite-drag term decreases with wing loading, while the induced-drag term increases with wing loading.
-
----
-
-## OEI/climb boundary
-
-The OEI/climb boundary is retained as a preliminary constant engine-out thrust target:
-
-```matlab
-TW_OEI = 0.285;
-```
-
-In the matching chart this appears as a horizontal line:
-
-$$
-\left(\frac{T}{W}\right)_{OEI}=0.285
-$$
-
-This value is treated as a **calibrated preliminary climb requirement**, not as a full certification-level climb-gradient calculation.
-
----
-
-## Active thrust envelope
-
-The active thrust requirement is the upper envelope of the take-off, cruise, and OEI/climb requirements:
-
-$$
-\left(\frac{T}{W}\right)_{active}
-=
-\max
-\left[
-\left(\frac{T}{W}\right)_{TO},
-\left(\frac{T}{W}\right)_{cr},
-\left(\frac{T}{W}\right)_{OEI}
-\right]
-$$
-
-A candidate design point is inside the raw constraint-design area only if:
-
-$$
-\frac{W}{S}\leq\left(\frac{W}{S}\right)_L
-$$
-
-and
-
-$$
-\frac{T}{W}\geq\left(\frac{T}{W}\right)_{active}
-$$
-
----
-
-## MATLAB design-point evaluation method
-
-After the updated constraint graph had been generated, the feasible design area contained many possible combinations of \(W/S\) and \(T/W\).  
-Therefore, the final design point was **not** selected by visual inspection alone.
-
-Instead, a group-developed MATLAB design-point evaluation method was adopted:
-
-1. Candidate points inside the feasible design region are sampled.
-2. Each candidate is rebuilt as an aircraft-level sizing case.
-3. Candidates that fail the constraint, benchmark, or configuration checks are rejected.
-4. The remaining feasible candidates are ranked using a weighted objective score.
-
-This makes the design-point selection process repeatable and consistent with the aircraft-level iteration logic.
-
----
-
-## Objective score
-
-The final aircraft-level score is:
-
-$$
-J=
-0.24J_{\mathrm{constraint}}
-+0.24J_{\mathrm{aero}}
-+0.28J_{\mathrm{benchmark}}
-+0.14J_{\mathrm{configuration}}
-+0.10J_{\mathrm{size}}
-$$
-
-Lower \(J\) is better.
-
-### Score components
-
-- **\(J_{\mathrm{constraint}}\)**  
-  Penalises insufficient landing, take-off, thrust, or cruise margins.
-
-- **\(J_{\mathrm{aero}}\)**  
-  Penalises unrealistic or poor aerodynamic performance, including \(L/D\), \(C_{D0}\), and cruise \(C_L\).
-
-- **\(J_{\mathrm{benchmark}}\)**  
-  Penalises mismatch with comparable narrow-body aircraft in MTOW, span, wing area, engine thrust, and fuel mass.
-
-- **\(J_{\mathrm{configuration}}\)**  
-  Penalises poor CG, static margin, tail area ratio, landing-gear arm, and span-to-fuselage integration.
-
-- **\(J_{\mathrm{size}}\)**  
-  Penalises unnecessary growth in wing area, span, thrust, tail area, or MTOW.
-
-The default `balanced` mode prioritises realism, constraint margin, and aerodynamic quality while still discouraging unnecessary aircraft growth.
-
----
-
-## Key design result
-
-The MATLAB sweep identifies the local score-minimum candidate near:
-
-$$
-(W/S,\;T/W)_{score\text{-}min}
-=
-(5050\;\mathrm{N\,m^{-2}},\;0.335)
-$$
-
-This point satisfies the hard constraint set, but it gives a slightly smaller landing margin than the intended approximate 10% margin convention.
-
-Therefore, the final reported design point is rounded to:
-
-$$
-(W/S,\;T/W)_{final}
-=
-(5000\;\mathrm{N\,m^{-2}},\;0.335)
-$$
-
-At this final reported point:
-
-- Landing margin \(\approx 10.4\%\)
-- Active thrust requirement \(\approx 0.293\)
-- Thrust margin \(\approx 14.4\%\)
-
-The final reported point is therefore a slightly more conservative version of the MATLAB score-minimum candidate.
-
----
-
-## Repository structure
-
-```text
-.
-├── CW4_realisticConfig.m
-├── run_CW4_realistic_design_sweep.m
-├── run_single_design_point_realistic.m
-├── run_CW4_compare_realistic_modes.m
-│
-├── cw4_buildConstraintGraph.m
-├── cw4_queryConstraintGraph.m
-├── cw4_generateConstraintAreaCandidates.m
-├── cw4_plotConstraintGraph.m
-├── cw4_constraintGraphTable.m
-│
-├── cw4_aircraftSizingLoop.m
-├── cw4_evaluateCandidateRealistic.m
-├── cw4_constraintChecksRealistic.m
-├── cw4_scoreRealistic.m
-│
-├── cw4_aeroModel.m
-├── cw4_massModel.m
-├── cw4_wingGeometry.m
-├── cw4_tailSizing.m
-├── cw4_balanceModel.m
-├── cw4_landingGear.m
-├── cw4_propulsion.m
-│
-├── cw4_exportResultsRealistic.m
-├── cw4_makePlotsRealistic.m
-├── cw4_resultStructTemplate.m
-├── cw4_forceSameFields.m
-│
-├── A_R.m
-├── plot_constraint_graph_CW2_CW4_overlay.m
-│
-├── figures/
-└── results_calibrated_balanced/
-```
-
----
-
-## Main files
+## Important MATLAB files
 
 | File | Purpose |
 |---|---|
-| `CW4_realisticConfig.m` | Central configuration file for mission requirements, constraint assumptions, aerodynamic assumptions, benchmark limits, scoring targets, and objective weights. |
-| `run_CW4_realistic_design_sweep.m` | Main script for the default balanced-mode design sweep. |
-| `run_single_design_point_realistic.m` | Checks one specified design point, currently \(W/S=5000\ \mathrm{N\,m^{-2}}\) and \(T/W=0.335\). |
-| `run_CW4_compare_realistic_modes.m` | Compares different design philosophies: `minimum_size`, `balanced`, and `robust`. |
-| `cw4_buildConstraintGraph.m` | Builds landing, take-off, cruise, OEI/climb, and active-envelope constraint curves. |
-| `cw4_generateConstraintAreaCandidates.m` | Samples candidate points directly inside the non-rectangular raw constraint-design area. |
-| `cw4_queryConstraintGraph.m` | Checks whether a candidate point lies inside the raw constraint area. |
-| `cw4_aircraftSizingLoop.m` | Runs the feedback loop for mass, geometry, CG, tail, and gear closure. |
-| `cw4_evaluateCandidateRealistic.m` | Evaluates one candidate and returns geometry, mass, performance, balance, gear, margin, and score data. |
-| `cw4_scoreRealistic.m` | Computes the weighted aircraft-level objective score. |
-| `cw4_exportResultsRealistic.m` | Exports CSV tables, figures, and `.mat` result files. |
-| `cw4_makePlotsRealistic.m` | Generates report-ready candidate maps and objective score maps. |
+| `run_CW4_realistic_design_sweep.m` | Main script for the balanced CW4 design sweep. |
+| `CW4_realisticConfig.m` | Stores the mission assumptions, aircraft requirements, geometry settings, benchmark limits and scoring targets. |
+| `cw4_buildConstraintGraph.m` | Creates the final CW4 constraint graph used to define the design area. |
+| `cw4_generateConstraintAreaCandidates.m` | Generates candidate points inside the non-rectangular constraint-design area. |
+| `cw4_runSweepRealistic.m` | Runs the candidate sweep and sends each point through the full-aircraft evaluation process. |
+| `cw4_aircraftSizingLoop.m` | Iterates wing geometry, tail sizing, propulsion, aerodynamics, mass, balance and landing gear for a candidate point. |
+| `cw4_constraintChecksRealistic.m` | Applies aircraft-level margins and real-aircraft benchmark filters. |
+| `cw4_scoreRealistic.m` | Scores feasible candidates and identifies the best balanced design point. |
+| `cw4_exportResultsRealistic.m` | Exports result tables, figures and MATLAB data files. |
+| `plot_constraint_graph_CW2_CW4_overlay.m` | Produces the CW2/CW4 overlay figure. |
 
 ---
 
-## Quick start
+## How to run
 
-### 1. Open MATLAB
-
-Set the MATLAB current folder to the repository root.
-
-### 2. Run the default balanced sweep
+Open MATLAB in the repository folder and run:
 
 ```matlab
 run_CW4_realistic_design_sweep
 ```
 
-This script will:
-
-- rebuild the updated constraint graph;
-- generate candidate points inside the feasible design area;
-- run the aircraft-level sizing loop;
-- score feasible candidates;
-- export result tables and plots.
-
-Outputs are written to:
-
-```text
-results_calibrated_balanced/
-```
-
----
-
-### 3. Check one design point
-
-To check the final reported design point:
+To check one design point manually, run:
 
 ```matlab
 run_single_design_point_realistic
 ```
 
-By default, this checks:
+To regenerate the CW2/CW4 overlay figure, run:
 
 ```matlab
-WS = 5000;     % N/m^2
-TW = 0.335;    % dimensionless
+plot_constraint_graph_CW2_CW4_overlay
 ```
 
 ---
 
-### 4. Compare design philosophies
+## Main outputs
 
-```matlab
-run_CW4_compare_realistic_modes
-```
-
-This compares:
-
-```text
-minimum_size
-balanced
-robust
-```
-
-and writes:
-
-```text
-realistic_mode_comparison.csv
-```
-
----
-
-## Output files
-
-The main sweep writes its results to:
+The main sweep writes results to:
 
 ```text
 results_calibrated_balanced/
 ```
 
-Typical outputs include:
+Important output files include:
 
-| Output file | Description |
+| Output | Meaning |
 |---|---|
-| `constraint_graph_balanced.png` | Report-ready updated matching chart with feasible design area and selected point. |
-| `constraint_graph_curves_balanced.csv` | Numerical data for the landing, take-off, cruise, OEI/climb, and active-envelope curves. |
-| `candidate_map_balanced.png` | Candidate map showing feasible, infeasible, and selected points. |
-| `objective_score_map_balanced.png` | Objective score distribution inside the feasible design area. |
-| `top10_normalized_outcomes_balanced.png` | Comparison of normalized outcomes for top candidates. |
-| `all_candidates_balanced.csv` | Full candidate table. |
-| `feasible_candidates_balanced.csv` | Feasible candidate table sorted by score. |
-| `top20_candidates_balanced.csv` | Top 20 candidates from the feasible set. |
+| `all_candidates_balanced.csv` | Full candidate table, including feasible and rejected candidates. |
+| `feasible_candidates_balanced.csv` | Candidates that passed the aircraft-level checks. |
+| `top20_candidates_balanced.csv` | Best 20 feasible candidates ranked by objective score. |
 | `report_top_candidates_summary_balanced.csv` | Compact report-ready summary table. |
-| `rejection_summary_balanced.csv` | Counts of candidate rejection reasons. |
-| `CW4_realistic_results_balanced.mat` | MATLAB result archive containing tables, config, and constraint graph data. |
+| `rejection_summary_balanced.csv` | Summary of why candidates were rejected. |
+| `CW4_realistic_results_balanced.mat` | MATLAB data file containing the sweep results. |
 
----
+The GitHub README result figures are stored in:
 
-## Design modes
-
-The configuration file supports three scoring philosophies:
-
-| Mode | Purpose |
-|---|---|
-| `balanced` | Default mode. Balances constraint robustness, aerodynamic performance, aircraft realism, configuration quality, and size. |
-| `minimum_size` | Gives stronger weight to size reduction. |
-| `robust` | Gives stronger weight to constraint margins and robustness. |
-
-The mode is selected in:
-
-```matlab
-CW4_realisticConfig(mode)
+```text
+figures/figure/
 ```
 
-Example:
+The three README figures are:
 
-```matlab
-p = CW4_realisticConfig('balanced');
+```text
+figures/figure/combined.png
+figures/figure/design area.png
+figures/figure/detail.png
 ```
 
 ---
 
-## Current v9 update
+## Important interpretation notes
 
-The v9 version uses a full-scale report matching chart:
-
-$$
-W/S \text{ axis: } 1000 \text{ to } 8000\ \mathrm{N\,m^{-2}}
-$$
-
-The MATLAB candidate sampling range is still focused near the useful design region, but the plotted constraint graph shows the wider aircraft-design context.  
-The sampling window is shown as a dashed box inside the full matching chart.
-
-Candidate points are still filtered using the full constraint graph before the aircraft-level sizing loop is run.
+- The selected point is the **best balanced candidate under the current assumptions**, not a universally optimal aircraft.
+- The constraint graph defines the initial feasible design area, while the full-aircraft loop applies more detailed sizing and realism checks.
+- The grey region and rejected points are useful because they show that many mathematically possible points do not produce acceptable aircraft-level outcomes.
+- The objective score is used for ranking candidate designs; it should be interpreted together with the aircraft geometry, mass, thrust, aerodynamic and stability outputs.
+- The result is suitable for supporting a preliminary design report, especially when explaining why the final CW4 design point differs from the earlier CW2 point.
 
 ---
 
-## Important assumptions
+## Current best candidate summary
 
-This tool uses transparent preliminary-design assumptions, including:
+The current best candidate is:
 
-- landing weight relief with `betaLanding = 0.85`;
-- fixed high-lift targets:
-  - `CLmaxTO = 2.4`;
-  - `CLmaxL = 3.0`;
-- fixed chart-level drag coefficient:
-  - `CD0 = 0.0175`;
-- aspect ratio:
-  - `AR = 8.5`;
-- Oswald efficiency factor:
-  - `e = 0.85`;
-- preliminary OEI/climb target:
-  - `T/W = 0.285`;
-- cruise thrust-lapse factor:
-  - `alpha_lap = 0.291`;
-- real-aircraft benchmark limits for a 186-seat, Mach 0.8, 3000 nm class narrow-body aircraft.
+```text
+W/S = 5050 N/m²
+T/W = 0.335
+```
 
-These assumptions are appropriate for a conceptual design comparison, but they should **not** be interpreted as certified aircraft performance data.
+This candidate is preferred because it remains inside the final constraint-design area, passes the aircraft-level feasibility checks, gives realistic narrow-body transport geometry and thrust levels, and lies in the low-score region of the objective-score map.
 
----
-
-## Limitations
-
-This tool does **not** perform:
-
-- CFD or wind-tunnel aerodynamic validation;
-- detailed high-lift system design;
-- certification-level take-off or landing performance calculation;
-- full FAR/CS-25 climb-gradient analysis;
-- detailed structural sizing;
-- detailed engine deck modelling;
-- detailed landing-gear tyre, brake, oleo, and retraction design;
-- full longitudinal, lateral, or directional stability analysis.
-
-The selected point should therefore be described as:
-
-> the best preliminary candidate under the stated assumptions, constraint definitions, benchmark limits, and scoring policy.
-
----
-
-## Suggested report wording
-
-The method can be described in the report as:
-
-> A group-developed MATLAB design-point evaluation method was used after the updated constraint graph had been generated. The code sampled candidate \(W/S\)–\(T/W\) points inside the updated feasible region, rebuilt each candidate as an aircraft-level sizing case, rejected candidates that failed the constraint, benchmark, or configuration checks, and ranked the remaining candidates using a weighted objective score.
-
----
-
-## Author
-
-**Group 7**  
-AERO1003 Aircraft Design Project  
-Coursework 4
